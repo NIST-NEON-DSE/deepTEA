@@ -18,6 +18,7 @@ from __future__ import division
 import numpy as np
 import cv2
 from PIL import Image
+import rasterio
 
 from .transform import change_transform_origin
 
@@ -29,9 +30,17 @@ def read_image_bgr(path):
         path: Path to the image.
     """
     # We deliberately don't use cv2.imread here, since it gives no feedback on errors while reading the image.
-    image = np.asarray(Image.open(path).convert('RGB'))
-    return image[:, :, ::-1].copy()
-
+    #TODO here is where the image is turned into a np array
+    #image = np.asarray(Image.open(path).convert('RGB'))
+    #return image[:, :, ::-1].copy()
+    with rasterio.open(path, 'r') as ds:
+        arr = ds.read()  # read all raster values
+    arr = np.swapaxes(arr,0,1)
+    arr = np.swapaxes(arr,1,2)
+    #figure out why rasterio produces 4 channels
+    arr = arr[:,:,np.arange(3)]
+    print(arr.shape)
+    return arr[:, :, ::-1].copy()
 
 def preprocess_image(x, mode='caffe'):
     """ Preprocess an image by subtracting the ImageNet mean.

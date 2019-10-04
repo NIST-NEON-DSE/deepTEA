@@ -1,6 +1,0 @@
-path,xmin,ymin,xmax,ymax,label
-/Users/sergiomarconi/Documents/GitHub/Chapter3a/convnets_data/retinanet/dataset/images/simplot_9_rgb.tif,15,161,65,185,OSBS.01308
-/Users/sergiomarconi/Documents/GitHub/Chapter3a/convnets_data/retinanet/dataset/images/simplot_9_rgb.tif,0,118,47,170,OSBS.01305
-/Users/sergiomarconi/Documents/GitHub/Chapter3a/convnets_data/retinanet/dataset/images/simplot_9_rgb.tif,87,118,125,144,OSBS.01298
-/Users/sergiomarconi/Documents/GitHub/Chapter3a/convnets_data/retinanet/dataset/images/simplot_9_rgb.tif,68,98,90,129,OSBS.00011
-/Users/sergiomarconi/Documents/GitHub/Chapter3a/convnets_data/retinanet/dataset/images/simplot_9_rgb.tif,45,113,66,129,OSBS.01268

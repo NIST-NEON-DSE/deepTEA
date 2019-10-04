@@ -11,6 +11,7 @@ import warnings
 import keras
 import keras.preprocessing.image
 import tensorflow as tf
+import glob
 
 import sys
 wdir = os.getcwd()
@@ -22,7 +23,7 @@ __package__ = "keras_retinanet.bin"
 
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
-from keras_retinanet import layers  # noqa: F401
+from . import layers  # noqa: F401
 from keras_retinanet import losses
 from keras_retinanet import models
 from keras_retinanet.callbacks import RedirectModel
@@ -105,11 +106,11 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0, \
         with tf.device('/cpu:0'):
             model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, \
             modifier=modifier), weights=weights, skip_mismatch=True)
-
         training_model = multi_gpu_model(model, gpus=multi_gpu)
     else:
         training_model = model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, \
         modifier=modifier), weights=weights, skip_mismatch=True)
+        training_model = model
     # make prediction model
     prediction_model = retinanet_bbox(model=model, nms_threshold=nms_threshold) # anchor_params=anchor_params,
     # compile model
@@ -244,7 +245,7 @@ def create_generators(args, preprocess_image):
         validation_generator = CSVGenerator(
             args.val_annotations,
             args.classes,
-            shuffle_groups=False,
+            shuffle_groups=True,
             **common_args
         )
     else:
@@ -330,7 +331,7 @@ def parse_args(args):
 
 
 
-def main_rnet(args=None, experiment=None):
+def main(args=None, experiment=None):
     # parse arguments
     print("parsing arguments")
     if args is None:
@@ -406,7 +407,7 @@ def main_rnet(args=None, experiment=None):
         steps_per_epoch=train_generator.size()/args.batch_size,
         epochs=args.epochs,
         verbose=1,
-        #shuffle=False,
+        shuffle=False,
         callbacks=callbacks,
         workers=args.workers,
         use_multiprocessing=args.multiprocessing,
@@ -420,124 +421,5 @@ def main_rnet(args=None, experiment=None):
         return saved_models[-1]
 
 
-def main(args=None, data=None, DeepForest_config=None, experiment=None):
-    # parse arguments
-    print("parsing arguments")
-    if args is None:
-        args = sys.argv[1:]
-    args = parse_args(args)
-    # create object that stores backbone information
-    backbone = models.backbone(args.backbone)
-    # make sure keras is the minimum required version
-    print("Get keras version")
-    check_keras_version()
-    # optionally choose specific GPU
-    if args.gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    print("Get session")
-    keras.backend.tensorflow_backend.set_session(get_session())
-    # create the generators
-    print("Creating generators")
-    train_generator, validation_generator = create_h5_generators(data, DeepForest_config=DeepForest_config)
-    #Log number of trees trained on
-    if experiment:
-        experiment.log_parameter("Number of Training Trees", train_generator.total_trees)
-    # create the model
-    if args.snapshot is not None:
-        print('Loading model, this may take a secondkeras-retinanet.\n')
-        model            = models.load_model(args.snapshot, backbone_name=args.backbone)
-        training_model   = model
-        prediction_model = retinanet_bbox(model=model, nms_threshold=DeepForest_config["nms_threshold"])
-    else:
-        weights = args.weights
-        # default to imagenet if nothing else is specified
-        if weights is None and args.imagenet_weights:
-            print("Loading imagenet weights")
-            weights = backbone.download_imagenet()
-
-        print('Creating model, this may take a secondkeras-retinanet .')
-        model, training_model, prediction_model = create_models(
-            backbone_retinanet=backbone.retinanet,
-            num_classes=train_generator.num_classes(),
-            weights=weights,
-            multi_gpu=args.multi_gpu,
-            freeze_backbone=args.freeze_backbone,
-            nms_threshold=DeepForest_config["nms_threshold"],
-            input_channels=DeepForest_config["input_channels"]
-        )
-
-    # print model summary
-    #print(model.summary())
-
-    # this lets the generator compute backbone layer shapes using the actual backbone model
-    if 'vgg' in args.backbone or 'densenet' in args.backbone:
-        compute_anchor_targets = functools.partial(anchor_targets_bbox, shapes_callback=make_shapes_callback(model))
-        train_generator.compute_anchor_targets = compute_anchor_targets
-        if validation_generator is not None:
-            validation_generator.compute_anchor_targets = compute_anchor_targets
-
-    # create the callbacks
-    callbacks = create_callbacks(
-        model,
-        training_model,
-        prediction_model,
-        train_generator,
-        validation_generator,
-        args,
-        experiment,
-        DeepForest_config
-    )
-
-    #Make sure no overlapping data
-    if validation_generator:
-        matched=[]
-        for entry in validation_generator.image_data.values():
-            test = entry in train_generator.image_data.values()
-            matched.append(test)
-        if sum(matched) > 0:
-            raise Exception("%.2f percent of validation windows are in training data" % (100 * sum(matched)/train_generator.size()))
-        else:
-            print("Test passed: No overlapping data in training and validation")
-
-    #start training
-    history = training_model.fit_generator(
-        generator=train_generator,
-        steps_per_epoch=train_generator.size()/DeepForest_config["batch_size"],
-        epochs=args.epochs,
-        verbose=2,
-        shuffle=False,
-        callbacks=callbacks,
-        workers=DeepForest_config["workers"],
-        use_multiprocessing=DeepForest_config["use_multiprocessing"],
-        max_queue_size=DeepForest_config["max_queue_size"])
-
-    #return path snapshot of final epoch
-    saved_models = glob.glob(os.path.join(args.snapshot_path,"*.h5"))
-    saved_models.sort()
-
-    #Return model if found
-    if len(saved_models) > 0:
-        return saved_models[-1]
-
 if __name__ == '__main__':
-    #from config import retinanet_config as config
-    from config.train_config import load_config
-    #Set training or training
-    mode_parser     = argparse.ArgumentParser(description='Retinanet training or finetuning?')
-    mode_parser.add_argument('--mode', help='train, retrain or final')
-    mode_parser.add_argument('--dir', help='destination dir on HPC' )
-    mode=mode_parser.parse_args()
-
-    #load config
-    DeepForest_config = load_config()
-    #set experiment and log configs
-    #mode=mode_parser.parse_args()
-    #experiment = Experiment(api_key="fVhiP3vIQJUBeZyuKJWN9KjSO", project_name='deeptea', log_code=True)
-
-    #log params
-    #experiment.log_parameters(config)
-    #experiment.log_parameter("Start Time", dirname)
-    #experiment.log_parameter("Training Mode", mode.mode)
-
-
-    output_model = main(args=None, experiment=experiment)
+    output_model = main(args=None)

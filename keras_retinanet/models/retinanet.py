@@ -234,7 +234,7 @@ def __build_anchors(anchor_parameters, features):
 
     return keras.layers.Concatenate(axis=1, name='anchors')(anchors)
 
-
+#TODO added here channels, check if correct (they don't go anywhere further, so I probably need to )
 def retinanet(
     inputs,
     backbone_layers,
@@ -242,6 +242,7 @@ def retinanet(
     num_anchors             = None,
     create_pyramid_features = __create_pyramid_features,
     submodels               = None,
+    input_channels          = 3,
     name                    = 'retinanet'
 ):
     """ Construct a RetinaNet model on top of a backbone.
@@ -290,6 +291,7 @@ def retinanet_bbox(
     class_specific_filter = True,
     name                  = 'retinanet-bbox',
     anchor_params         = None,
+    nms_threshold         = 0.1,
     **kwargs
 ):
     """ Construct a RetinaNet model on top of a backbone and adds convenience functions to output boxes directly.
@@ -344,6 +346,7 @@ def retinanet_bbox(
     # filter detections (apply NMS / score threshold / select top-k)
     detections = layers.FilterDetections(
         nms                   = nms,
+        nms_threshold         = nms_threshold,
         class_specific_filter = class_specific_filter,
         name                  = 'filtered_detections'
     )([boxes, classification] + other)

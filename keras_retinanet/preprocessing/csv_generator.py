@@ -151,6 +151,7 @@ class CSVGenerator(Generator):
             self.labels[value] = key
 
         # csv with img_path, x1, y1, x2, y2, class_name
+        #TODO this is where to change stuff to run the regression
         try:
             with _open_for_csv(csv_data_file) as file:
                 self.image_data = _read_annotations(csv.reader(file, delimiter=','), self.classes)
