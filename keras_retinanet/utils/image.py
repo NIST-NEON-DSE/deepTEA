@@ -39,7 +39,7 @@ def read_image_bgr(path):
     arr = np.swapaxes(arr,1,2)
     #figure out why rasterio produces 4 channels
     arr = arr[:,:,np.arange(3)]
-    print(arr.shape)
+    #print(arr.shape)
     return arr[:, :, ::-1].copy()
 
 def preprocess_image(x, mode='caffe'):
