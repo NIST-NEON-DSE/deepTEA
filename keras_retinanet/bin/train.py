@@ -22,25 +22,26 @@ __package__ = "keras_retinanet.bin"
 
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
-from .. import layers  # noqa: F401
-from .. import losses
-from .. import models
-from ..callbacks import RedirectModel
-from ..callbacks.eval import Evaluate
-from ..models.retinanet import retinanet_bbox
-from ..preprocessing.csv_generator import CSVGenerator
-from ..preprocessing.open_images import OpenImagesGenerator
-from ..preprocessing.pascal_voc import PascalVocGenerator
-from ..utils.anchors import make_shapes_callback
-from ..utils.config import read_config_file, parse_anchor_parameters
-from ..utils.keras_version import check_keras_version
-from ..utils.model import freeze as freeze_model
-from ..utils.transform import random_transform_generator
-from ..utils.image import random_visual_effect_generator
+from keras_retinanet import layers  # noqa: F401
+from keras_retinanet import losses
+from keras_retinanet import models
+from keras_retinanet.callbacks import RedirectModel
+from keras_retinanet.callbacks.eval import Evaluate
+from keras_retinanet.models.retinanet import retinanet_bbox
+from keras_retinanet.preprocessing.csv_generator import CSVGenerator
+from keras_retinanet.preprocessing.open_images import OpenImagesGenerator
+from keras_retinanet.preprocessing.pascal_voc import PascalVocGenerator
+from keras_retinanet.utils.anchors import make_shapes_callback
+from keras_retinanet.utils.config import read_config_file, parse_anchor_parameters
+from keras_retinanet.utils.keras_version import check_keras_version
+from keras_retinanet.utils.model import freeze as freeze_model
+from keras_retinanet.utils.transform import random_transform_generator
+from keras_retinanet.utils.image import random_visual_effect_generator
 
 # adjust this to point to your downloaded/trained model
 # models can be downloaded here: https://github.com/fizyr/keras-retinanet/releases
-model_path = os.path.join('./snapshots', 'resnet50_coco_best_v2.1.0.h5')
+model_path = os.path.join('./keras_retinanet/backbones', 'resnet50_coco_best_v2.1.0.h5')
+model_path = os.path.join('./keras_retinanet/backbones', 'universal_deepLidar.h5')
 
 # load retinanet model
 model = models.load_model(model_path, backbone_name='resnet50')
@@ -281,14 +282,14 @@ def check_args(parsed_args):
 def parse_args(args):
     """ Parse the arguments.
     """
-    parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
-    #subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     def csv_list(string):
         return string.split(',')
+    parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
+    #subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--snapshot',          help='Resume training from a snapshot.')
+    group.add_argument('--snapshot',          help='Resume training from a snapshot.', default = './snapshots/latest_snapshot.h5', type=str)
     group.add_argument('--imagenet-weights',  help='Initialize the model with pretrained imagenet weights. This is the default behaviour.', action='store_const', const=True, default=True)
-    group.add_argument('--weights',           help='Initialize the model with weights from a file.', default = './snapshots/universal_deepLidar.h5', type=str)
+    group.add_argument('--weights',           help='Initialize the model with weights from a file.', default = './keras_retinanet/backbones/universal_deepLidar.h5', type=str)
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
     #not sure if I want them here
     parser.add_argument('--annotations', help='Path to CSV file containing annotations for training.', default='./dataset/train.csv', type=str)
@@ -296,7 +297,7 @@ def parse_args(args):
     parser.add_argument('--val-annotations', help='Path to CSV file containing annotations for validation (optional).', default='./dataset/test.csv', type=str)
     #other args
     parser.add_argument('--backbone',         help='Backbone model used by retinanet.', default='resnet50', type=str)
-    parser.add_argument('--batch-size',       help='Size of the batches.', default=1, type=int)
+    parser.add_argument('--batch-size',       help='Size of the batches.', default=40, type=int)
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).')
     parser.add_argument('--multi-gpu',        help='Number of GPUs to use for parallel processing.', type=int, default=0)
     parser.add_argument('--multi-gpu-force',  help='Extra flag needed to enable (experimental) multi-gpu support.', action='store_true')
@@ -304,7 +305,7 @@ def parse_args(args):
     parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000) #batch_size
     parser.add_argument('--batchsize',        help='Batch size.', type=int, default=40) #batch_size
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
-    parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots')
+    parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots/')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
     parser.add_argument('--no-evaluation',    help='Disable per epoch evaluation.', dest='evaluation', action='store_false')
@@ -318,7 +319,7 @@ def parse_args(args):
     parser.add_argument('--nms_threshold',   help='Parameter regulating non-max suppression for overlapping boxes', type=float, default=0.1)
     parser.add_argument('--input_channels',   help='How many channels in the image?', type=int, default=3)
     #Comet ml image viewer
-    parser.add_argument('--save-path',       help='Path for saving eval images with detections (doesn\'t work for COCO).')
+    parser.add_argument('--save-path',       help='Path for saving eval images with detections (doesn\'t work for COCO).', default="./eval/", type=str)
     parser.add_argument('--score-threshold', help='Threshold on score to filter detections with (defaults to 0.3).', default=0.05, type=float)
     # Fit generator arguments
     parser.add_argument('--multiprocessing',  help='Use multiprocessing in fit_generator.', action='store_true')
@@ -399,9 +400,9 @@ def main(args=None, experiment=None):
     if not args.compute_val_loss:
         validation_generator = None
     # start training
-    history =  training_model.fit_generator(
+    training_model.fit_generator(
         generator=train_generator,
-        steps_per_epoch=train_generator.size()/args.batch_size,
+        steps_per_epoch=args.steps,
         epochs=args.epochs,
         verbose=1,
         shuffle=True,
