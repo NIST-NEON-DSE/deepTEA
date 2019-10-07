@@ -279,6 +279,7 @@ def check_args(parsed_args):
     return parsed_args
 
 
+
 def parse_args(args):
     """ Parse the arguments.
     """
@@ -287,7 +288,7 @@ def parse_args(args):
     parser     = argparse.ArgumentParser(description='Simple training script for training a RetinaNet network.')
     #subparsers = parser.add_subparsers(help='Arguments for specific dataset types.', dest='dataset_type')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--snapshot',          help='Resume training from a snapshot.', default = './snapshots/latest_snapshot.h5', type=str)
+    group.add_argument('--snapshot',          help='Resume training from a snapshot.', default = './snapshots/latest_deepTEA.h5', type=str)
     group.add_argument('--imagenet-weights',  help='Initialize the model with pretrained imagenet weights. This is the default behaviour.', action='store_const', const=True, default=True)
     group.add_argument('--weights',           help='Initialize the model with weights from a file.', default = './keras_retinanet/backbones/universal_deepLidar.h5', type=str)
     group.add_argument('--no-weights',        help='Don\'t initialize the model with any weights.', dest='imagenet_weights', action='store_const', const=False)
@@ -302,7 +303,7 @@ def parse_args(args):
     parser.add_argument('--multi-gpu',        help='Number of GPUs to use for parallel processing.', type=int, default=0)
     parser.add_argument('--multi-gpu-force',  help='Extra flag needed to enable (experimental) multi-gpu support.', action='store_true')
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=40)
-    parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=10000) #batch_size
+    parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=50) #batch_size
     parser.add_argument('--batchsize',        help='Batch size.', type=int, default=40) #batch_size
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots/')
